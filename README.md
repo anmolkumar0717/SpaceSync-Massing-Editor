@@ -64,16 +64,13 @@ This keeps the bottom face anchored at its exact Y position — whether the mass
 
 ## Bonus Implemented
 
-- ✅ **+10** — Drag to move with G key, grid snap, no orbit conflict
-- ✅ **+10** — Overlap warning (3D AABB), both masses turn red, clears on separation
-- ✅ **+10** — Sun shadow simulation (6am–6pm slider)
-- ✅ **+5**  — IFC-style JSON export
-- ✅ **+5**  — Mass rename (inline in panel, billboard label in 3D, auto Block A/B/C...)
+- ✅  — Drag to move with G key, grid snap, no orbit conflict
+- ✅  — Overlap warning (3D AABB), both masses turn red, clears on separation
+- ✅  — Sun shadow simulation (6am–6pm slider)
+- ✅  — IFC-style JSON export
+- ✅  — Mass rename (inline in panel, billboard label in 3D, auto Block A/B/C...)
 
 ## One Thing I'd Improve
 
 The plan view currently just sets the camera to orthographic top-down. Given more time, I'd render a proper 2D canvas overlay using the masses' XZ positions to draw filled, labeled rectangles — with dimension annotations — independently of the 3D renderer, so it reads cleanly as an architectural plan.
 
----
-
-*Built with AI assistance (Claude). All architecture, logic, and edge-case handling authored and reviewed manually.*
