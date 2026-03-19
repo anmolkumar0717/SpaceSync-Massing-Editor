@@ -2,7 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import Scene from "./Scene";
 import PropertiesPanel from "./PropertiesPanel";
 import StatusBar from "./StatusBar";
-import Toolbar from "./Toolbar";
+import Toolbar from "./ToolBar";
 
 export default function App() {
   return (
