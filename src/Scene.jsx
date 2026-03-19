@@ -167,30 +167,27 @@ export default function Scene() {
         };
     }, [grabState, isPlanView]);
 
-    /* ── Ground click → place new mass ───────────────────────────────────── */
-    const handleGroundClick = (point, _isShift) => {
-        const isShift = shiftRef.current;
-        clearSelection();
-        if (isShift) return; // shift+ground = deselect only, no new mass
-
-        const mass = createMassData({
-            position: [
-                Math.round(point.x),
-                DEFAULTS.height / 2,
-                Math.round(point.z),
-            ],
-        });
-        commandHistory.execute(addMassCmd(mass));
+    /* ── Ground click ─────────────────────────────────────────────────────── */
+    // Plain click  → deselect everything
+    // Shift+click  → place new block on ground at that point
+    const handleGroundClick = (point) => {
+        if (shiftRef.current) {
+            const mass = createMassData({
+                position: [Math.round(point.x), DEFAULTS.height / 2, Math.round(point.z)],
+            });
+            commandHistory.execute(addMassCmd(mass));
+        } else {
+            clearSelection();
+        }
     };
 
-    /* ── Mass click → select / stack ─────────────────────────────────────── */
+    /* ── Mass click ───────────────────────────────────────────────────────── */
+    // Plain click  → select that mass
+    // Shift+click  → place new block on top (stacking)
     const handleMassClick = (e, mass, faceNormalY) => {
-        if (grabState) return; // grab confirm is handled by canvas click
+        if (grabState) return;
 
-        if (shiftRef.current) { toggleSelect(mass.id); return; }
-
-        // Top face clicked → stack a new mass on top
-        if (faceNormalY > 0.85) {
+        if (shiftRef.current) {
             const topY = mass.position[1] + mass.height / 2;
             const newMass = createMassData({
                 position: [Math.round(e.point.x), topY + DEFAULTS.height / 2, Math.round(e.point.z)],
