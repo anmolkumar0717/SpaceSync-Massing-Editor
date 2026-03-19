@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useStore, FLOOR_H, DEFAULTS } from "./store";
-import { commandHistory } from "./commandHistory";
-import { updateMassCmd, deleteMassesCmd } from "./commands";
+import { commandHistory } from "./CommandHistory";
+import { updateMassCmd, deleteMassesCmd } from "./Commands";
 
 /* ── Shared styles ─────────────────────────────────────────────────────────── */
 const css = {
