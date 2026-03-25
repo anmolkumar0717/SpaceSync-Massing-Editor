@@ -1,29 +1,19 @@
-import { Canvas } from "@react-three/fiber";
-import Scene from "./Scene";
+import BabylonScene from "./BabylonScene";
 import PropertiesPanel from "./PropertiesPanel";
 import StatusBar from "./StatusBar";
-import Toolbar from "./ToolBar";
+import Toolbar from "./Toolbar";
 
 export default function App() {
   return (
     <div style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column" }}>
       <Toolbar />
 
-      {/* Main content below toolbar */}
-      <div style={{ flex: 1, display: "flex", marginTop: 42, marginBottom: 38, overflow: "hidden" }}>
-        {/* 3D viewport */}
-        <div style={{ flex: 1, position: "relative" }}>
-          <Canvas
-            shadows
-            camera={{ position: [35, 35, 55], fov: 45 }}
-            style={{ width: "100%", height: "100%", background: "#1a2336" }}
-            gl={{ antialias: true }}
-          >
-            <Scene />
-          </Canvas>
+      <div style={{ flex: 1, display: "flex", marginTop: 42, marginBottom: 36, overflow: "hidden" }}>
+        {/* 3D viewport — Babylon renders into this canvas */}
+        <div style={{ flex: 1, position: "relative", background: "#1a2336" }}>
+          <BabylonScene />
         </div>
 
-        {/* Properties panel */}
         <PropertiesPanel />
       </div>
 
