@@ -22,7 +22,7 @@ import {
 import {
     useStore, SITE, DEFAULTS, FLOOR_H, FAR_LIMIT, createMassData,
 } from "./store";
-import { CommandHistory } from "./CommandHistory";
+import { commandHistory } from "./CommandHistory";
 import { addMassCmd, deleteMassesCmd, moveMassCmd } from "./Commands";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
