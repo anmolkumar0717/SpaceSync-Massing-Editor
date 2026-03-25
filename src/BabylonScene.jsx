@@ -22,8 +22,8 @@ import {
 import {
     useStore, SITE, DEFAULTS, FLOOR_H, FAR_LIMIT, createMassData,
 } from "./store";
-import { commandHistory } from "./commandHistory";
-import { addMassCmd, deleteMassesCmd, moveMassCmd } from "./commands";
+import { CommandHistory } from "./CommandHistory";
+import { addMassCmd, deleteMassesCmd, moveMassCmd } from "./Commands";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DRAG_THRESHOLD_PX2 = 25; // 5px²
