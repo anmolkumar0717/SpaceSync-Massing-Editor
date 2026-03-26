@@ -16,7 +16,7 @@ import {
     HemisphericLight, DirectionalLight,
     MeshBuilder, StandardMaterial, DynamicTexture,
     ShadowGenerator, HighlightLayer,
-    Mesh, PointerEventTypes,
+    Mesh, PointerEventTypes, Plane,
 } from "@babylonjs/core";
 
 import {
@@ -25,7 +25,6 @@ import {
 import { commandHistory } from "./CommandHistory";
 import { addMassCmd, deleteMassesCmd, moveMassCmd } from "./Commands";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const DRAG_THRESHOLD_PX2 = 25; // 5px²
 
 export default function BabylonScene() {
@@ -125,7 +124,9 @@ export default function BabylonScene() {
         const meshMap = new Map();
         let selBoxMesh = null; // current multi-select bounding box lines
         const shiftRef = { current: false };
-        const grabRef = { current: null }; // { id, origPos }
+        // grabRef: { id, origPos, axis }
+        // axis: null = free XZ plane | 'X' = lock X only | 'Y' = vertical | 'Z' = lock Z only
+        const grabRef = { current: null };
         const ptrDownRef = { current: null }; // { x, y, dragged }
 
         // ── Helper: create one mass mesh + billboard label ──────────────────────
@@ -146,13 +147,13 @@ export default function BabylonScene() {
             box.material = mat;
 
             // Billboard label (DynamicTexture rendered on a plane parented to the box)
-            const labelMesh = MeshBuilder.CreatePlane(`label-${m.id}`, { width: 5, height: 1 }, scene);
-            labelMesh.position.y = m.height / 2 + 0.9;
+            const labelMesh = MeshBuilder.CreatePlane(`label-${m.id}`, { width: 8, height: 1.8 }, scene);
+            labelMesh.position.y = m.height / 2 + 1.4;
             labelMesh.parent = box;
             labelMesh.billboardMode = Mesh.BILLBOARDMODE_ALL;
             labelMesh.isPickable = false;
 
-            const dt = new DynamicTexture(`dt-${m.id}`, { width: 256, height: 64 }, scene, false);
+            const dt = new DynamicTexture(`dt-${m.id}`, { width: 512, height: 128 }, scene, false);
             const lmat = new StandardMaterial(`lmat-${m.id}`, scene);
             lmat.diffuseTexture = dt;
             lmat.emissiveColor = Color3.White();
@@ -161,7 +162,7 @@ export default function BabylonScene() {
             lmat.backFaceCulling = false;
             labelMesh.material = lmat;
 
-            dt.drawText(m.name, null, 46, "bold 30px monospace", "#1e293b", "rgba(255,255,255,0.88)", true, true);
+            dt.drawText(m.name, null, 88, "bold 42px monospace", "#1e293b", "rgba(255,255,255,0.92)", true, true);
 
             meshMap.set(m.id, {
                 box, labelMesh, dt, mat, lmat,
@@ -290,7 +291,7 @@ export default function BabylonScene() {
                         shadowGen.addShadowCaster(box, true);
 
                         e.labelMesh.parent = box;
-                        e.labelMesh.position.y = m.height / 2 + 0.9;
+                        e.labelMesh.position.y = m.height / 2 + 1.4;
                         e.box = box;
                         e.prevW = m.width;
                         e.prevH = m.height;
@@ -308,7 +309,7 @@ export default function BabylonScene() {
 
                     // Name change → redraw label texture
                     if (e.prevName !== m.name) {
-                        e.dt.drawText(m.name, null, 46, "bold 30px monospace", "#1e293b", "rgba(255,255,255,0.88)", true, true);
+                        e.dt.drawText(m.name, null, 88, "bold 42px monospace", "#1e293b", "rgba(255,255,255,0.92)", true, true);
                         e.prevName = m.name;
                     }
                 }
@@ -349,16 +350,75 @@ export default function BabylonScene() {
                     if (dx * dx + dy * dy > DRAG_THRESHOLD_PX2) ptrDownRef.current.dragged = true;
                 }
 
-                // Grab mode: ray-cast to ground and move the mass
+                // Grab mode — axis-aware raycasting
                 if (grabRef.current) {
-                    const pick = scene.pick(scene.pointerX, scene.pointerY, (m) => m.name === "ground");
-                    if (pick?.hit) {
-                        const pt = pick.pickedPoint;
-                        const { masses, _updateMass } = useStore.getState();
-                        const m = masses.find((x) => x.id === grabRef.current.id);
-                        if (m) _updateMass(grabRef.current.id, {
-                            position: [Math.round(pt.x), m.position[1], Math.round(pt.z)],
-                        });
+                    const { masses, _updateMass } = useStore.getState();
+                    const m = masses.find((x) => x.id === grabRef.current.id);
+                    if (!m) return;
+
+                    const [cx, cy, cz] = m.position;
+                    const axis = grabRef.current.axis;
+
+                    // Build a plane through the mass centre facing the camera
+                    const camFwd = camera.getForwardRay().direction;
+                    const nx = camFwd.x, ny = camFwd.y, nz = camFwd.z;
+                    const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, null, camera);
+
+                    if (axis === "X") {
+                        // Slide along world X — vertical plane facing camera (XZ projected)
+                        const len = Math.sqrt(nz * nz + 0.0001);
+                        const plane = Plane.FromPositionAndNormal(
+                            new Vector3(cx, cy, cz),
+                            new Vector3(0, 0, nz / len)
+                        );
+                        const dist = ray.intersectsPlane(plane);
+                        if (dist !== null) {
+                            const hit = ray.origin.add(ray.direction.scale(dist));
+                            _updateMass(grabRef.current.id, { position: [Math.round(hit.x), cy, cz] });
+                        }
+
+                    } else if (axis === "Z") {
+                        // Slide along world Z — vertical plane facing camera (XZ projected)
+                        const len = Math.sqrt(nx * nx + 0.0001);
+                        const plane = Plane.FromPositionAndNormal(
+                            new Vector3(cx, cy, cz),
+                            new Vector3(nx / len, 0, 0)
+                        );
+                        const dist = ray.intersectsPlane(plane);
+                        if (dist !== null) {
+                            const hit = ray.origin.add(ray.direction.scale(dist));
+                            _updateMass(grabRef.current.id, { position: [cx, cy, Math.round(hit.z)] });
+                        }
+
+                    } else if (axis === "Y") {
+                        // Slide along world Y — vertical plane facing camera (horizontal normal only)
+                        const hLen = Math.sqrt(nx * nx + nz * nz) || 1;
+                        const plane = Plane.FromPositionAndNormal(
+                            new Vector3(cx, cy, cz),
+                            new Vector3(nx / hLen, 0, nz / hLen)
+                        );
+                        const dist = ray.intersectsPlane(plane);
+                        if (dist !== null) {
+                            const hit = ray.origin.add(ray.direction.scale(dist));
+                            _updateMass(grabRef.current.id, {
+                                position: [cx, Math.max(m.height / 2, Math.round(hit.y)), cz],
+                            });
+                        }
+
+                    } else {
+                        // ── Free XYZ — camera-facing plane through mass centre ──────────
+                        const fLen = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+                        const plane = Plane.FromPositionAndNormal(
+                            new Vector3(cx, cy, cz),
+                            new Vector3(nx / fLen, ny / fLen, nz / fLen)
+                        );
+                        const dist = ray.intersectsPlane(plane);
+                        if (dist !== null) {
+                            const hit = ray.origin.add(ray.direction.scale(dist));
+                            _updateMass(grabRef.current.id, {
+                                position: [Math.round(hit.x), Math.max(m.height / 2, Math.round(hit.y)), Math.round(hit.z)],
+                            });
+                        }
                     }
                 }
             }
@@ -444,17 +504,34 @@ export default function BabylonScene() {
             if (e.ctrlKey && e.key === "z" && !e.shiftKey) { e.preventDefault(); commandHistory.undo(); }
             if (e.ctrlKey && (e.key === "y" || (e.shiftKey && e.key === "Z"))) { e.preventDefault(); commandHistory.redo(); }
 
-            // G → grab / move mode
+            // G → enter grab / move mode (free XZ by default)
             if (!inInput && !e.ctrlKey && !grabRef.current && (e.key === "g" || e.key === "G")) {
                 const { masses, selectedIds } = useStore.getState();
                 if (selectedIds.length !== 1) return;
                 const m = masses.find((x) => x.id === selectedIds[0]);
                 if (!m) return;
-                grabRef.current = { id: m.id, origPos: [...m.position] };
+                grabRef.current = { id: m.id, origPos: [...m.position], axis: null };
                 camera.detachControl();
+                return;
             }
 
-            // Escape → cancel grab
+            // While grabbing: X / Y / Z lock axis  (press again to free)
+            if (grabRef.current && !inInput) {
+                if (e.key === "x" || e.key === "X") {
+                    grabRef.current.axis = grabRef.current.axis === "X" ? null : "X";
+                    return;
+                }
+                if (e.key === "y" || e.key === "Y") {
+                    grabRef.current.axis = grabRef.current.axis === "Y" ? null : "Y";
+                    return;
+                }
+                if (e.key === "z" || e.key === "Z") {
+                    grabRef.current.axis = grabRef.current.axis === "Z" ? null : "Z";
+                    return;
+                }
+            }
+
+            // Escape → cancel grab and restore original position
             if (e.key === "Escape" && grabRef.current) {
                 useStore.getState()._updateMass(grabRef.current.id, { position: grabRef.current.origPos });
                 grabRef.current = null;

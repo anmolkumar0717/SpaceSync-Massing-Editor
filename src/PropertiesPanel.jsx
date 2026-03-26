@@ -241,7 +241,8 @@ export default function PropertiesPanel() {
                 {[
                     ["Click", "select block"],
                     ["Shift+Click", "add new block"],
-                    ["G", "grab / move"],
+                    ["G", "grab · free XYZ"],
+                    ["G → X/Y/Z", "constrain axis"],
                     ["Del", "delete"],
                     ["Ctrl+Z / Y", "undo / redo"],
                 ].map(([key, action]) => (
